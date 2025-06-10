@@ -173,9 +173,24 @@
         </main>
     </div>
 
+    <footer class="dm-input-area">
+      <input type="file" id="dmFileInput" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" style="display: none;" multiple>
+      <input type="file" id="dmCameraInput" accept="image/*" capture="environment" style="display: none;">
+      <button class="action-btn dm-action-btn" id="dmAttachButton" aria-label="Attach file">
+        <i class="fas fa-paperclip"></i>
+      </button>
+      <button class="action-btn dm-action-btn" id="dmCameraButton" aria-label="Take photo">
+        <i class="fas fa-camera"></i>
+      </button>
+      <input id="dm-input" placeholder="Type a direct message..." disabled />
+      <button id="dm-send-btn" onclick="sendDirectMessage()" disabled>
+        <i class="fas fa-paper-plane"></i>
+      </button>
+    </footer>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
     <script src="/static/main.js"></script>
-    
+
 </body>
 
 </html>

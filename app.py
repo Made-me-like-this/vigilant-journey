@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 import secrets
 import os
 import time
+import json
 from datetime import datetime
 import logging
 
@@ -442,14 +443,27 @@ def on_get_dm_history(data):
         ).order_by(Message.timestamp).all()
         
         # Convert to list of dictionaries
-        history = [
-            {
-                'sender': msg.sender,
-                'message': msg.message,
-                'timestamp': msg.timestamp,
-                'system': msg.system
-            } for msg in query
-        ]
+        history = []
+        for msg in query:
+            try:
+                # Try to parse as JSON (file message)
+                json.loads(msg.message)
+                history.append({
+                    'sender': msg.sender,
+                    'message': msg.message,
+                    'timestamp': msg.timestamp,
+                    'system': msg.system,
+                    'file': True
+                })
+            except (json.JSONDecodeError, TypeError):
+                # Regular text message
+                history.append({
+                    'sender': msg.sender,
+                    'message': msg.message,
+                    'timestamp': msg.timestamp,
+                    'system': msg.system,
+                    'file': False
+                })
         
         # If no messages in database, check in-memory cache
         if not history:
@@ -517,6 +531,69 @@ def on_staring(data):
             }, to=target_sid)
     except Exception as e:
         logger.error(f"Error in staring: {str(e)}")
+
+@socketio.on('file_message')
+def on_file_message(data):
+    try:
+        file_data = data.get('file')
+        is_dm = data.get('isDm', False)
+        
+        if not file_data:
+            return
+        
+        # Add timestamp
+        data['timestamp'] = time.time()
+        
+        if is_dm:
+            sender = data.get('sender')
+            recipient = data.get('recipient')
+            
+            if not all([sender, recipient]):
+                return
+            
+            # Store file message in database as JSON
+            file_message = Message(
+                sender=sender,
+                recipient=recipient,
+                message=json.dumps(file_data),
+                is_dm=True,
+                timestamp=data['timestamp']
+            )
+            db.session.add(file_message)
+            db.session.commit()
+            
+            # Send to recipient if online
+            if recipient in user_sessions:
+                recipient_sid = user_sessions[recipient]
+                emit('file_message', data, to=recipient_sid)
+            
+            # Send confirmation to sender
+            emit('file_message', data)
+            
+        else:
+            username = data.get('username')
+            room = data.get('room')
+            
+            if not all([username, room]) or room not in rooms:
+                return
+            
+            # Store file message in database as JSON
+            file_message = Message(
+                room_name=room,
+                sender=username,
+                message=json.dumps(file_data),
+                is_dm=False,
+                timestamp=data['timestamp']
+            )
+            db.session.add(file_message)
+            db.session.commit()
+            
+            # Send to all users in the room
+            emit('file_message', data, to=room)
+            
+    except Exception as e:
+        logger.error(f"Error handling file message: {str(e)}")
+        emit('error', {'message': 'Failed to send file'})
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=False)

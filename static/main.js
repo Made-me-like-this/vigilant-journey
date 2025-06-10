@@ -205,6 +205,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // Setup file upload functionality
+  setupFileUpload();
+  setupCameraCapture();
 });
 
 // Initialize Socket.IO
@@ -582,11 +586,19 @@ function setupSocketListeners() {
       dmMessages.innerHTML = '';
       if (data.history && data.history.length > 0) {
         data.history.forEach(msg => {
-        displayMessage({
-            username: msg.sender,
-            message: msg.message,
-            timestamp: msg.timestamp
-          }, true);
+          if (msg.file) {
+            displayFileMessage({
+              sender: msg.sender,
+              file: JSON.parse(msg.message),
+              timestamp: msg.timestamp
+            }, true);
+          } else {
+            displayMessage({
+              username: msg.sender,
+              message: msg.message,
+              timestamp: msg.timestamp
+            }, true);
+          }
         });
       } else {
         const emptyState = document.createElement('div');
@@ -595,6 +607,19 @@ function setupSocketListeners() {
         dmMessages.appendChild(emptyState);
       }
       dmMessages.scrollTop = dmMessages.scrollHeight;
+    }
+  });
+
+  socket.on('file_message', (data) => {
+    if (data.isDm) {
+      if ((data.sender === dmRecipient && data.sender !== currentUsername) ||
+          (data.recipient === dmRecipient && data.sender === currentUsername)) {
+        displayFileMessage(data, true);
+      } else if (data.sender !== currentUsername) {
+        showNotification(`New file from ${data.sender}`, "info");
+      }
+    } else {
+      displayFileMessage(data);
     }
   });
 }
@@ -817,4 +842,328 @@ function stareAtMessage(username) {
     socket.emit('staring', { username: currentUsername, target: username, room: currentRoom });
     showNotification(`You are staring at ${username}'s message...`, "info");
   }
+}
+
+// File upload variables
+let selectedFiles = [];
+let isDmUpload = false;
+
+function setupFileUpload() {
+  // Main chat file upload
+  const attachButton = document.getElementById('attachButton');
+  const fileInput = document.getElementById('fileInput');
+  
+  if (attachButton && fileInput) {
+    attachButton.addEventListener('click', () => {
+      isDmUpload = false;
+      fileInput.click();
+    });
+    
+    fileInput.addEventListener('change', handleFileSelection);
+  }
+
+  // DM file upload
+  const dmAttachButton = document.getElementById('dmAttachButton');
+  const dmFileInput = document.getElementById('dmFileInput');
+  
+  if (dmAttachButton && dmFileInput) {
+    dmAttachButton.addEventListener('click', () => {
+      isDmUpload = true;
+      dmFileInput.click();
+    });
+    
+    dmFileInput.addEventListener('change', handleFileSelection);
+  }
+
+  // Modal controls
+  const closePreview = document.getElementById('closePreview');
+  const cancelUpload = document.getElementById('cancelUpload');
+  const confirmUpload = document.getElementById('confirmUpload');
+  
+  if (closePreview) closePreview.addEventListener('click', closeFilePreview);
+  if (cancelUpload) cancelUpload.addEventListener('click', closeFilePreview);
+  if (confirmUpload) confirmUpload.addEventListener('click', uploadSelectedFiles);
+}
+
+function setupCameraCapture() {
+  // Main chat camera
+  const cameraButton = document.getElementById('cameraButton');
+  const cameraInput = document.getElementById('cameraInput');
+  
+  if (cameraButton && cameraInput) {
+    cameraButton.addEventListener('click', () => {
+      isDmUpload = false;
+      cameraInput.click();
+    });
+    
+    cameraInput.addEventListener('change', handleFileSelection);
+  }
+
+  // DM camera
+  const dmCameraButton = document.getElementById('dmCameraButton');
+  const dmCameraInput = document.getElementById('dmCameraInput');
+  
+  if (dmCameraButton && dmCameraInput) {
+    dmCameraButton.addEventListener('click', () => {
+      isDmUpload = true;
+      dmCameraInput.click();
+    });
+    
+    dmCameraInput.addEventListener('change', handleFileSelection);
+  }
+}
+
+function handleFileSelection(event) {
+  const files = Array.from(event.target.files);
+  
+  if (files.length === 0) return;
+  
+  // Validate file sizes (max 10MB per file)
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  const validFiles = [];
+  
+  for (const file of files) {
+    if (file.size > maxSize) {
+      showNotification(`File "${file.name}" is too large. Max size is 10MB.`, "error");
+      continue;
+    }
+    validFiles.push(file);
+  }
+  
+  if (validFiles.length === 0) {
+    event.target.value = ''; // Clear the input
+    return;
+  }
+  
+  selectedFiles = validFiles;
+  showFilePreview();
+  event.target.value = ''; // Clear the input
+}
+
+function showFilePreview() {
+  const modal = document.getElementById('filePreviewModal');
+  const container = document.getElementById('filePreviewContainer');
+  
+  if (!modal || !container) return;
+  
+  container.innerHTML = '';
+  
+  selectedFiles.forEach((file, index) => {
+    const previewItem = document.createElement('div');
+    previewItem.className = 'file-preview-item';
+    
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'file-remove';
+    removeBtn.innerHTML = '×';
+    removeBtn.onclick = () => removeFile(index);
+    
+    if (file.type.startsWith('image/')) {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      img.onload = () => URL.revokeObjectURL(img.src);
+      previewItem.appendChild(img);
+    } else if (file.type.startsWith('video/')) {
+      const video = document.createElement('video');
+      video.src = URL.createObjectURL(file);
+      video.controls = true;
+      video.muted = true;
+      previewItem.appendChild(video);
+    } else {
+      const fileIcon = document.createElement('div');
+      fileIcon.className = 'file-icon';
+      
+      if (file.type.startsWith('audio/')) {
+        fileIcon.innerHTML = '<i class="fas fa-music"></i>';
+      } else if (file.type.includes('pdf')) {
+        fileIcon.innerHTML = '<i class="fas fa-file-pdf"></i>';
+      } else if (file.type.includes('document') || file.type.includes('word')) {
+        fileIcon.innerHTML = '<i class="fas fa-file-word"></i>';
+      } else if (file.type.includes('text')) {
+        fileIcon.innerHTML = '<i class="fas fa-file-alt"></i>';
+      } else {
+        fileIcon.innerHTML = '<i class="fas fa-file"></i>';
+      }
+      
+      previewItem.appendChild(fileIcon);
+    }
+    
+    const fileInfo = document.createElement('div');
+    fileInfo.className = 'file-info';
+    fileInfo.innerHTML = `
+      <div>${file.name}</div>
+      <div>${formatFileSize(file.size)}</div>
+    `;
+    
+    previewItem.appendChild(fileInfo);
+    previewItem.appendChild(removeBtn);
+    container.appendChild(previewItem);
+  });
+  
+  modal.style.display = 'flex';
+}
+
+function removeFile(index) {
+  selectedFiles.splice(index, 1);
+  if (selectedFiles.length === 0) {
+    closeFilePreview();
+  } else {
+    showFilePreview();
+  }
+}
+
+function closeFilePreview() {
+  const modal = document.getElementById('filePreviewModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  selectedFiles = [];
+}
+
+function uploadSelectedFiles() {
+  if (selectedFiles.length === 0) return;
+  
+  selectedFiles.forEach(file => {
+    uploadFile(file);
+  });
+  
+  closeFilePreview();
+}
+
+function uploadFile(file) {
+  const reader = new FileReader();
+  
+  reader.onload = function(e) {
+    const fileData = {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      data: e.target.result
+    };
+    
+    if (isDmUpload && dmRecipient) {
+      // Send file via direct message
+      if (socket) {
+        socket.emit('file_message', {
+          sender: currentUsername,
+          recipient: dmRecipient,
+          file: fileData,
+          isDm: true
+        });
+      }
+    } else if (currentRoom) {
+      // Send file to room
+      if (socket) {
+        socket.emit('file_message', {
+          username: currentUsername,
+          room: currentRoom,
+          file: fileData,
+          isDm: false
+        });
+      }
+    }
+  };
+  
+  reader.readAsDataURL(file);
+}
+
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function displayFileMessage(data, isDm = false) {
+  const messagesDiv = isDm ? document.getElementById('dm-messages') : document.getElementById("messages");
+  if (!messagesDiv) return;
+
+  const messageDiv = document.createElement("div");
+  messageDiv.className = `message-container ${data.username === currentUsername || data.sender === currentUsername ? 'me' : 'them'}`;
+
+  const bubble = document.createElement("div");
+  bubble.className = `message-bubble ${data.username === currentUsername || data.sender === currentUsername ? 'me' : 'them'}`;
+
+  const header = document.createElement("div");
+  header.className = "message-header";
+  header.innerText = data.username || data.sender;
+
+  const fileContainer = document.createElement("div");
+  fileContainer.className = "file-message";
+
+  const file = data.file;
+  const fileAttachment = document.createElement("div");
+  fileAttachment.className = "file-attachment";
+
+  if (file.type.startsWith('image/')) {
+    const img = document.createElement('img');
+    img.src = file.data;
+    img.alt = file.name;
+    img.style.cursor = 'pointer';
+    img.onclick = () => openFileInNewTab(file.data, file.name);
+    fileAttachment.appendChild(img);
+  } else if (file.type.startsWith('video/')) {
+    const video = document.createElement('video');
+    video.src = file.data;
+    video.controls = true;
+    video.preload = 'metadata';
+    fileAttachment.appendChild(video);
+  } else {
+    const fileIcon = document.createElement('div');
+    fileIcon.className = 'file-type-icon';
+    
+    if (file.type.startsWith('audio/')) {
+      fileIcon.innerHTML = '<i class="fas fa-music"></i>';
+    } else if (file.type.includes('pdf')) {
+      fileIcon.innerHTML = '<i class="fas fa-file-pdf"></i>';
+    } else if (file.type.includes('document') || file.type.includes('word')) {
+      fileIcon.innerHTML = '<i class="fas fa-file-word"></i>';
+    } else if (file.type.includes('text')) {
+      fileIcon.innerHTML = '<i class="fas fa-file-alt"></i>';
+    } else {
+      fileIcon.innerHTML = '<i class="fas fa-file"></i>';
+    }
+    
+    const fileDetails = document.createElement('div');
+    fileDetails.className = 'file-details';
+    fileDetails.innerHTML = `
+      <div class="file-name">${file.name}</div>
+      <div class="file-size">${formatFileSize(file.size)}</div>
+    `;
+    
+    fileAttachment.appendChild(fileIcon);
+    fileAttachment.appendChild(fileDetails);
+    fileAttachment.style.cursor = 'pointer';
+    fileAttachment.onclick = () => downloadFile(file.data, file.name);
+  }
+
+  const timestamp = document.createElement("div");
+  timestamp.className = "message-timestamp";
+  timestamp.innerText = new Date(data.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  fileContainer.appendChild(fileAttachment);
+  bubble.appendChild(header);
+  bubble.appendChild(fileContainer);
+  bubble.appendChild(timestamp);
+
+  messageDiv.appendChild(bubble);
+  messagesDiv.appendChild(messageDiv);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function openFileInNewTab(dataUrl, filename) {
+  const link = document.createElement('a');
+  link.href = dataUrl;
+  link.target = '_blank';
+  link.download = filename;
+  link.click();
+}
+
+function downloadFile(dataUrl, filename) {
+  const link = document.createElement('a');
+  link.href = dataUrl;
+  link.download = filename;
+  link.click();
 }

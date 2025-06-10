@@ -691,6 +691,238 @@ body {
     cursor: not-allowed;
 }
 
+/* File Upload and Preview Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    max-width: 90%;
+    max-height: 90%;
+    width: 600px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 0;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.modal-close:hover {
+    background-color: var(--bg-secondary);
+}
+
+.modal-body {
+    padding: 1rem;
+}
+
+.file-preview-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.file-preview-item {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--bg-secondary);
+    max-width: 150px;
+    max-height: 150px;
+}
+
+.file-preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.file-preview-item video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.file-preview-item .file-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    text-align: center;
+}
+
+.file-preview-item .file-remove {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    background: rgba(255, 0, 0, 0.8);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 1.5rem;
+    height: 1.5rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.file-preview-item .file-remove:hover {
+    background: rgba(255, 0, 0, 1);
+}
+
+.file-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 150px;
+    height: 150px;
+    font-size: 3rem;
+    color: var(--text-light);
+}
+
+.preview-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.dm-action-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.dm-action-btn:hover {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.file-message {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.file-attachment {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: var(--bg-secondary);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.file-attachment:hover {
+    background: var(--bg-tertiary);
+}
+
+.file-attachment img {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: var(--radius);
+    object-fit: cover;
+}
+
+.file-attachment video {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: var(--radius);
+}
+
+.file-attachment .file-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.file-attachment .file-name {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.file-attachment .file-size {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.file-attachment .file-type-icon {
+    font-size: 2rem;
+    color: var(--primary-color);
+}
+
+/* Mobile adjustments for file preview */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        max-height: 85%;
+    }
+    
+    .file-preview-container {
+        max-height: 300px;
+    }
+    
+    .file-preview-item {
+        max-width: 120px;
+        max-height: 120px;
+    }
+    
+    .preview-actions {
+        flex-direction: column;
+    }
+}
+
 /* Online Users */
 .online-users-section {
     margin-top: 1rem;
