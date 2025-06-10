@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatterHub</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="description" content="Modern chat application with public and private rooms">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.svg">
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="mobile-header">
+            <button class="hamburger" aria-label="Menu" id="sidebar-toggle">
+                <span></span><span></span><span></span>
+            </button>
+            <h1 class="app-title">ChatterHub</h1>
+            <div class="mobile-user-icon">
+                <img id="mobile-profile-img" src="" alt="" style="display: none;">
+                <i class="fas fa-user" id="mobile-default-avatar"></i>
+            </div>
+        </header>
+
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3 class="logo">ChatterHub</h3>
+                <button class="close-sidebar" id="close-sidebar" aria-label="Close Menu">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <section class="sidebar-section profile-section">
+                <h4 class="section-title">Your Profile</h4>
+                <div class="user-info">
+                    <label for="profile-upload" class="avatar" title="Upload profile picture">
+                        <img id="profile-img" src="" alt="" style="display: none;">
+                        <i class="fas fa-user" id="default-avatar"></i>
+                        <div class="avatar-overlay">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                        <input type="file" id="profile-upload" accept="image/*" style="display: none;">
+                    </label>
+                    <input id="username" placeholder="Your name" class="input" aria-label="Username">
+                </div>
+            </section>
+
+            <section class="sidebar-section chat-mode-section">
+                <h4 class="section-title">Chat Mode</h4>
+                <div class="chat-mode-toggle">
+                    <span class="mode-label">Room Chat</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="directChatMode">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="mode-label">Direct Chat</span>
+                </div>
+            </section>
+
+            <section id="roomJoinSection" class="sidebar-section join-room-section">
+                <h4 class="section-title">Join a Room</h4>
+                <form id="roomJoinForm" class="join-form">
+                    <div class="input-group">
+                        <i class="fas fa-hashtag input-icon"></i>
+                        <input id="room" placeholder="Enter room name" class="input" aria-label="Room Name">
+                    </div>
+                    <button type="button" class="btn primary" onclick="joinRoom()">
+                        <i class="fas fa-sign-in-alt"></i> Join
+                    </button>
+                </form>
+            </section>
+
+            <section id="createRoomSection" class="sidebar-section create-room-section">
+                <h4 class="section-title">Create a Room</h4>
+                <form class="create-form">
+                    <div class="input-group">
+                        <i class="fas fa-plus-circle input-icon"></i>
+                        <input id="newRoomName" placeholder="Room name" class="input" aria-label="New Room Name">
+                    </div>
+                    <div class="room-type-option">
+                        <label class="toggle">
+                            <input type="checkbox" id="isPrivateRoom">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Private Room</span>
+                        </label>
+                    </div>
+                    <div class="input-group secret-key-group">
+                        <i class="fas fa-key input-icon"></i>
+                        <input id="secretKey" placeholder="Secret Key" class="input secret-key"
+                            aria-label="Secret Key">
+                    </div>
+                    <button type="button" class="btn primary create-btn" onclick="createRoom()">
+                        <i class="fas fa-plus"></i> Create Room
+                    </button>
+                </form>
+            </section>
+
+            <section class="sidebar-section available-rooms-section">
+                <h4 class="section-title">
+                    <i class="fas fa-door-open"></i> Available Rooms
+                </h4>
+                <div id="room-list" class="room-list">
+                    <div class="empty-state">No rooms available</div>
+                </div>
+            </section>
+
+            <section id="onlineUsersSection" class="sidebar-section online-users-section">
+                <h4 class="section-title">
+                    <i class="fas fa-users"></i> Online Users
+                </h4>
+                <div id="onlineUsersList" class="online-users-list">
+                    <div class="empty-state">No users online</div>
+                </div>
+            </section>
+        </aside>
+
+        <main class="chat-area" id="chat">
+            <header class="room-header" id="currentRoom">
+                <div class="room-info">
+                    <i class="fas fa-hashtag room-icon"></i>
+                    <span class="room-name">Select a room</span>
+                </div>
+                <div class="room-actions">
+                    <button class="room-action-btn" id="roomInfoBtn" title="Room Information" aria-label="Room Information">
+                        <i class="fas fa-info-circle"></i>
+                    </button>
+                    <button class="room-action-btn" id="roomSettingsBtn" title="Room Settings" aria-label="Room Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="messages" id="messages">
+                <div class="welcome-message">
+                    <div class="welcome-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3>Welcome to ChatterHub!</h3>
+                    <p>Join or create a room to start chatting with others.</p>
+                    <div class="quick-actions">
+                        <button class="btn secondary quick-action-btn" id="quickJoinBtn">
+                            <i class="fas fa-sign-in-alt"></i> Join Popular Room
+                        </button>
+                        <button class="btn primary quick-action-btn" id="quickCreateBtn">
+                            <i class="fas fa-plus"></i> Create Room
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="input-area">
+                <button class="action-btn" id="attachButton" aria-label="Attach file">
+                    <i class="fas fa-paperclip"></i>
+                </button>
+                <div class="message-input-wrapper">
+                    <input id="messageInput" placeholder="Type a message..." aria-label="Message Input" />
+                    <div class="input-actions">
+                        <button class="action-btn" id="emojiButton" aria-label="Insert emoji">
+                            <i class="fas fa-smile"></i>
+                        </button>
+                    </div>
+                </div>
+                <button id="sendButton" class="send-btn" onclick="sendMessage()" aria-label="Send message">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </footer>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+    <script src="/static/main.js"></script>
+    
+</body>
+
+</html>
