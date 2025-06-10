@@ -249,6 +249,15 @@ def handle_message(data):
 
         if not all([username, room, message]) or room not in rooms:
             return
+        
+        # Validate message length and content
+        message = message.strip()
+        if len(message) > 1000:
+            emit('error', {'message': 'Message too long (max 1000 characters)'})
+            return
+        
+        if not message:
+            return
 
         data['timestamp'] = time.time()
         

@@ -22,6 +22,51 @@ const maxReconnectAttempts = 5;
 
 // Reconnection with exponential backoff
 let reconnectTimer = null;
+let dmRecipient = '';
+let onlineUsers = [];
+
+function setupDirectMessagingUI() {
+  // Check if direct messaging UI already exists
+  if (document.getElementById('direct-messaging')) {
+    return;
+  }
+
+  // Create direct messaging interface
+  const chatContainer = document.querySelector('.app-container');
+  const dmContainer = document.createElement('div');
+  dmContainer.id = 'direct-messaging';
+  dmContainer.className = 'direct-messaging';
+  dmContainer.style.display = 'none';
+  dmContainer.innerHTML = `
+    <header class="dm-header">
+      <button class="back-btn" onclick="closeDM()">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <div class="dm-recipient">
+        <i class="fas fa-user"></i>
+        <span id="dm-recipient">User</span>
+      </div>
+    </header>
+    <div class="dm-messages" id="dm-messages"></div>
+    <footer class="dm-input-area">
+      <input id="dm-input" placeholder="Type a direct message..." disabled />
+      <button id="dm-send-btn" onclick="sendDirectMessage()" disabled>
+        <i class="fas fa-paper-plane"></i>
+      </button>
+    </footer>
+  `;
+  chatContainer.appendChild(dmContainer);
+}
+
+function closeDM() {
+  const dmEl = document.getElementById('direct-messaging');
+  const chatEl = document.getElementById('chat');
+  if (dmEl && chatEl) {
+    dmEl.style.display = 'none';
+    chatEl.style.display = 'flex';
+    dmRecipient = '';
+  }
+}
 
 function reconnectWithBackoff() {
   if (socket && socket.connected) return;
@@ -271,10 +316,19 @@ function joinRoom() {
     return;
   }
 
+  // Show loading state
+  const joinBtn = document.querySelector('.btn.primary');
+  const originalText = joinBtn.innerHTML;
+  joinBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Joining...';
+  joinBtn.disabled = true;
+
   // Check if room exists and if it's private
   fetch(`/check_room/${room}`)
   .then(res => res.json())
   .then(data => {
+    // Reset button state
+    joinBtn.innerHTML = originalText;
+    joinBtn.disabled = false;
     if (!data.exists) {
       showNotification("Room doesn't exist", "error");
       return;
@@ -306,6 +360,9 @@ function joinRoom() {
   .catch(error => {
     console.error("Error checking room:", error);
     showNotification("Failed to check room status. Please try again.", "error");
+    // Reset button state on error
+    joinBtn.innerHTML = originalText;
+    joinBtn.disabled = false;
   });
 }
 
