@@ -50,7 +50,6 @@ body {
     height: 60px;
     background: var(--card-bg);
     padding: 0 1rem;
-    display: flex;
     align-items: center;
     justify-content: space-between;
     box-shadow: var(--shadow-sm);
@@ -63,36 +62,11 @@ body {
     color: var(--primary-color);
 }
 
-/* CSS Custom Properties */
-:root {
-    --primary-color: #3b82f6;
-    --primary-dark: #2563eb;
-    --bg-primary: #ffffff;
-    --bg-secondary: #f8fafc;
-    --bg-tertiary: #e2e8f0;
-    --card-bg: #ffffff;
-    --text-primary: #1e293b;
-    --text-light: #64748b;
-    --border-color: #e2e8f0;
-    --transition: all 0.2s ease;
-    --success-color: #10b981;
-    --error-color: #ef4444;
-    --warning-color: #f59e0b;
-}
-
-[data-theme="dark"] {
-    --bg-primary: #0f172a;
-    --bg-secondary: #1e293b;
-    --bg-tertiary: #334155;
-    --card-bg: #1e293b;
-    --text-primary: #f1f5f9;
-    --text-light: #94a3b8;
-    --border-color: #334155;
-}
+/* Remove duplicate CSS variables - using the ones defined above */
 
 /* Hamburger Menu */
 .hamburger {
-    display: block;
+    display: none;
     cursor: pointer;
     border: none;
     background: transparent;
@@ -411,6 +385,23 @@ body {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+}
+
+.room-type-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+}
+
+.secret-key-group {
+    display: none;
+}
+
+.toggle-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-left: 0.5rem;
 }
 
 .input-group {
@@ -870,6 +861,119 @@ body {
     }
 }
 
+/* Notification Styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    color: white;
+    font-weight: 500;
+    z-index: 1000;
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    max-width: 300px;
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+.notification.info {
+    background-color: var(--primary-color);
+}
+
+.notification.success {
+    background-color: var(--success-color);
+}
+
+.notification.error {
+    background-color: var(--error-color);
+}
+
+.notification.warning {
+    background-color: var(--warning-color);
+}
+
+.notification.staring {
+    background-color: var(--secondary-color);
+}
+
+/* System Message Styles */
+.system-message {
+    text-align: center;
+    color: var(--text-light);
+    font-size: 0.875rem;
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius);
+}
+
+/* Typing Indicator */
+.typing-indicator {
+    display: none;
+    color: var(--text-light);
+    font-style: italic;
+    font-size: 0.875rem;
+    padding: 0.5rem;
+    margin: 0.25rem 0;
+}
+
+/* Staring Indicator */
+.staring-indicator {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 1rem;
+    border-radius: 50%;
+    font-size: 2rem;
+    z-index: 1000;
+    animation: pulse 1s infinite;
+}
+
+.staring-indicator.fade-out {
+    opacity: 0;
+    transition: opacity 1s ease-out;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.1); }
+}
+
+/* Stare Button */
+.stare-btn {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    background: rgba(0, 0, 0, 0.1);
+    border: none;
+    border-radius: 50%;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: var(--text-light);
+    transition: background-color 0.2s;
+}
+
+.message-bubble:hover .stare-btn {
+    display: flex;
+}
+
+.stare-btn:hover {
+    background: rgba(0, 0, 0, 0.2);
+    color: var(--text-primary);
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
     .app-container {
@@ -885,12 +989,12 @@ body {
         z-index: 100;
         background-color: var(--card-bg);
         box-shadow: var(--shadow-lg);
-        transform: translateX(0); /* Initially hidden */
+        transform: translateX(0);
         transition: transform 0.3s ease-in-out;
     }
 
     .sidebar.open {
-        transform: translateX(300px); /* Slide in */
+        transform: translateX(300px);
     }
 
     .chat-area {
@@ -904,5 +1008,35 @@ body {
 
     .hamburger {
         display: block;
+    }
+
+    /* Hide close button on desktop */
+    .close-sidebar {
+        display: none;
+    }
+}
+
+/* Desktop - hide close button and mobile header */
+@media (min-width: 769px) {
+    .mobile-header {
+        display: none;
+    }
+    
+    .hamburger {
+        display: none;
+    }
+    
+    .close-sidebar {
+        display: none;
+    }
+    
+    .sidebar {
+        position: relative;
+        transform: none;
+    }
+    
+    .chat-area {
+        margin-top: 0;
+        height: 100vh;
     }
 }

@@ -56,6 +56,17 @@ function setupDirectMessagingUI() {
     </footer>
   `;
   chatContainer.appendChild(dmContainer);
+
+  // Setup DM input event listeners
+  const dmInput = document.getElementById('dm-input');
+  if (dmInput) {
+    dmInput.addEventListener('keypress', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        sendDirectMessage();
+      }
+    });
+  }
 }
 
 function closeDM() {
@@ -154,7 +165,10 @@ document.addEventListener('DOMContentLoaded', () => {
   loadRooms();
 
   // Setup mobile menu toggle
-  document.querySelector('.hamburger').addEventListener('click', toggleMenu);
+  const hamburger = document.querySelector('.hamburger');
+  if (hamburger) {
+    hamburger.addEventListener('click', toggleMenu);
+  }
 
   // Disable message input and send button initially
   updateChatInputState(false);
@@ -162,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize Socket.IO connection
   initializeSocket();
 
-  // Add direct messaging UI if not already added
+  // Add direct messaging UI
   setupDirectMessagingUI();
 
   // Setup message input event listeners
@@ -177,13 +191,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Setup DM message input event listeners
-  const dmInput = document.getElementById('dm-input');
-  if (dmInput) {
-    dmInput.addEventListener('keypress', (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        sendDirectMessage();
+  // Setup close sidebar button
+  const closeSidebar = document.getElementById('close-sidebar');
+  if (closeSidebar) {
+    closeSidebar.addEventListener('click', () => {
+      const sidebar = document.querySelector('.sidebar');
+      if (sidebar) {
+        sidebar.classList.remove('open');
+        const hamburger = document.querySelector('.hamburger');
+        if (hamburger) {
+          hamburger.classList.remove('active');
+        }
       }
     });
   }
@@ -637,6 +655,18 @@ function startDirectMessage(username) {
   dmInput.disabled = false;
   dmSendBtn.disabled = false;
   dmInput.focus();
+
+  // Hide mobile menu when starting DM
+  if (window.innerWidth <= 768) {
+    const sidebar = document.querySelector('.sidebar');
+    const hamburger = document.querySelector('.hamburger');
+    if (sidebar) {
+      sidebar.classList.remove('open');
+    }
+    if (hamburger) {
+      hamburger.classList.remove('active');
+    }
+  }
 
   // Fetch DM history
   if (socket) {
