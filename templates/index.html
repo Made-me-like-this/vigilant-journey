@@ -155,20 +155,22 @@
             </div>
 
             <footer class="input-area">
-                <button class="action-btn" id="attachButton" aria-label="Attach file">
-                    <i class="fas fa-paperclip"></i>
-                </button>
-                <div class="message-input-wrapper">
-                    <input id="messageInput" placeholder="Type a message..." aria-label="Message Input" />
-                    <div class="input-actions">
-                        <button class="action-btn" id="emojiButton" aria-label="Insert emoji">
-                            <i class="fas fa-smile"></i>
-                        </button>
+                <div class="input-row">
+                    <button class="action-btn" id="attachButton" aria-label="Attach file">
+                        <i class="fas fa-paperclip"></i>
+                    </button>
+                    <div class="message-input-wrapper">
+                        <input id="messageInput" placeholder="Type a message..." aria-label="Message Input" />
+                        <div class="input-actions">
+                            <button class="action-btn" id="emojiButton" aria-label="Insert emoji">
+                                <i class="fas fa-smile"></i>
+                            </button>
+                        </div>
                     </div>
+                    <button id="sendButton" class="send-btn" onclick="sendMessage()" aria-label="Send message">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
                 </div>
-                <button id="sendButton" class="send-btn" onclick="sendMessage()" aria-label="Send message">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
             </footer>
         </main>
     </div>
@@ -200,3 +202,4 @@
 </body>
 
 </html>
+```

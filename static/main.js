@@ -98,19 +98,52 @@ function reconnectWithBackoff() {
   if (socket && socket.connected) return;
 
   const baseDelay = 1000;  // Start with 1 second
-  const maxDelay = 5000;   // Max 5 seconds between attempts
-  const currentDelay = Math.min(baseDelay * Math.pow(2, reconnectAttempts), maxDelay);
+  const maxDelay = 10000;  // Max 10 seconds between attempts
+  const currentDelay = Math.min(baseDelay * Math.pow(1.5, reconnectAttempts), maxDelay);
 
   if (reconnectTimer) clearTimeout(reconnectTimer);
   reconnectTimer = setTimeout(() => {
     if (reconnectAttempts < maxReconnectAttempts) {
-      console.log(`Attempting to reconnect (<span class="math-inline">\{reconnectAttempts \+ 1\}/</span>{maxReconnectAttempts})...`);
+      console.log(`Attempting to reconnect (${reconnectAttempts + 1}/${maxReconnectAttempts})...`);
+      updateConnectionStatus('reconnecting');
       socket.connect();
       reconnectAttempts++;
     } else {
+      updateConnectionStatus('failed');
       showNotification("Unable to reconnect. Please refresh the page.", "error");
     }
   }, currentDelay);
+}
+
+// Connection status indicator
+function updateConnectionStatus(status) {
+  let statusIndicator = document.getElementById('connectionStatus');
+  if (!statusIndicator) {
+    statusIndicator = document.createElement('div');
+    statusIndicator.id = 'connectionStatus';
+    statusIndicator.className = 'connection-status';
+    document.body.appendChild(statusIndicator);
+  }
+
+  statusIndicator.className = `connection-status ${status}`;
+
+  switch (status) {
+    case 'connected':
+      statusIndicator.innerHTML = '<i class="fas fa-wifi"></i> Connected';
+      setTimeout(() => statusIndicator.style.display = 'none', 2000);
+      break;
+    case 'reconnecting':
+      statusIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reconnecting...';
+      statusIndicator.style.display = 'block';
+      break;
+    case 'failed':
+      statusIndicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Connection failed';
+      statusIndicator.style.display = 'block';
+      break;
+    default:
+      statusIndicator.innerHTML = '<i class="fas fa-wifi-slash"></i> Disconnected';
+      statusIndicator.style.display = 'block';
+  }
 }
 
 // Menu functionality
@@ -126,7 +159,7 @@ function toggleMenu() {
 document.addEventListener('DOMContentLoaded', () => {
   // Add direct messaging UI first
   setupDirectMessagingUI();
-  
+
   // Setup profile picture upload
   const profileUpload = document.getElementById('profile-upload');
   const profileImg = document.getElementById('profile-img');
@@ -224,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Setup file upload functionality
   setupFileUpload();
   setupCameraCapture();
-  
+
   // Setup emoji functionality
   setupEmojiPicker();
 });
@@ -478,6 +511,7 @@ function setupSocketListeners() {
     console.log('Connected to Socket.IO server');
     reconnectAttempts = 0;
     updateChatInputState(true);
+    updateConnectionStatus('connected');
 
     // Rejoin room if we were in one
     if (currentRoom && currentUsername) {
@@ -490,12 +524,14 @@ function setupSocketListeners() {
   socket.on('connect_error', (error) => {
     console.error('Connection error:', error);
     updateChatInputState(false);
+    updateConnectionStatus('failed');
     showNotification("Connection error. Retrying...", "warning");
   });
 
   socket.on('disconnect', (reason) => {
     console.log('Disconnected:', reason);
     updateChatInputState(false);
+    updateConnectionStatus('disconnected');
 
     if (reason === 'io server disconnect') {
       // Server initiated disconnect, don't reconnect automatically
@@ -896,7 +932,7 @@ const emojiData = {
     '🦏', '🐪', '🐫', '🦒', '🦘', '🐃', '🐂', '🐄', '🐎', '🐖'
   ],
   'Food & Drink': [
-    '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈', '🍒',
+    '🍎', '🍐', '🍊', '🍋', '🍌','🍉', '🍇', '🍓', '🍈', '🍒',
     '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬',
     '🥒', '🌶️', '🌽', '🥕', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯',
     '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓',
@@ -938,7 +974,7 @@ const emojiData = {
   'Symbols': [
     '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔',
     '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️',
-    '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐',
+    '✝️', '☪️', '🕉️', '☸️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐',
     '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐',
     '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳',
     '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️',
@@ -961,26 +997,26 @@ function setupFileUpload() {
   // Main chat file upload
   const attachButton = document.getElementById('attachButton');
   const fileInput = document.getElementById('fileInput');
-  
+
   if (attachButton && fileInput) {
     attachButton.addEventListener('click', () => {
       isDmUpload = false;
       fileInput.click();
     });
-    
+
     fileInput.addEventListener('change', handleFileSelection);
   }
 
   // DM file upload
   const dmAttachButton = document.getElementById('dmAttachButton');
   const dmFileInput = document.getElementById('dmFileInput');
-  
+
   if (dmAttachButton && dmFileInput) {
     dmAttachButton.addEventListener('click', () => {
       isDmUpload = true;
       dmFileInput.click();
     });
-    
+
     dmFileInput.addEventListener('change', handleFileSelection);
   }
 
@@ -988,7 +1024,7 @@ function setupFileUpload() {
   const closePreview = document.getElementById('closePreview');
   const cancelUpload = document.getElementById('cancelUpload');
   const confirmUpload = document.getElementById('confirmUpload');
-  
+
   if (closePreview) closePreview.addEventListener('click', closeFilePreview);
   if (cancelUpload) cancelUpload.addEventListener('click', closeFilePreview);
   if (confirmUpload) confirmUpload.addEventListener('click', uploadSelectedFiles);
@@ -998,39 +1034,39 @@ function setupCameraCapture() {
   // Main chat camera
   const cameraButton = document.getElementById('cameraButton');
   const cameraInput = document.getElementById('cameraInput');
-  
+
   if (cameraButton && cameraInput) {
     cameraButton.addEventListener('click', () => {
       isDmUpload = false;
       cameraInput.click();
     });
-    
+
     cameraInput.addEventListener('change', handleFileSelection);
   }
 
   // DM camera
   const dmCameraButton = document.getElementById('dmCameraButton');
   const dmCameraInput = document.getElementById('dmCameraInput');
-  
+
   if (dmCameraButton && dmCameraInput) {
     dmCameraButton.addEventListener('click', () => {
       isDmUpload = true;
       dmCameraInput.click();
     });
-    
+
     dmCameraInput.addEventListener('change', handleFileSelection);
   }
 }
 
 function handleFileSelection(event) {
   const files = Array.from(event.target.files);
-  
+
   if (files.length === 0) return;
-  
+
   // Validate file sizes (max 10MB per file)
   const maxSize = 10 * 1024 * 1024; // 10MB
   const validFiles = [];
-  
+
   for (const file of files) {
     if (file.size > maxSize) {
       showNotification(`File "${file.name}" is too large. Max size is 10MB.`, "error");
@@ -1038,12 +1074,12 @@ function handleFileSelection(event) {
     }
     validFiles.push(file);
   }
-  
+
   if (validFiles.length === 0) {
     event.target.value = ''; // Clear the input
     return;
   }
-  
+
   selectedFiles = validFiles;
   showFilePreview();
   event.target.value = ''; // Clear the input
@@ -1052,20 +1088,20 @@ function handleFileSelection(event) {
 function showFilePreview() {
   const modal = document.getElementById('filePreviewModal');
   const container = document.getElementById('filePreviewContainer');
-  
+
   if (!modal || !container) return;
-  
+
   container.innerHTML = '';
-  
+
   selectedFiles.forEach((file, index) => {
     const previewItem = document.createElement('div');
     previewItem.className = 'file-preview-item';
-    
+
     const removeBtn = document.createElement('button');
     removeBtn.className = 'file-remove';
     removeBtn.innerHTML = '×';
     removeBtn.onclick = () => removeFile(index);
-    
+
     if (file.type.startsWith('image/')) {
       const img = document.createElement('img');
       img.src = URL.createObjectURL(file);
@@ -1080,7 +1116,7 @@ function showFilePreview() {
     } else {
       const fileIcon = document.createElement('div');
       fileIcon.className = 'file-icon';
-      
+
       if (file.type.startsWith('audio/')) {
         fileIcon.innerHTML = '<i class="fas fa-music"></i>';
       } else if (file.type.includes('pdf')) {
@@ -1092,22 +1128,22 @@ function showFilePreview() {
       } else {
         fileIcon.innerHTML = '<i class="fas fa-file"></i>';
       }
-      
+
       previewItem.appendChild(fileIcon);
     }
-    
+
     const fileInfo = document.createElement('div');
     fileInfo.className = 'file-info';
     fileInfo.innerHTML = `
       <div>${file.name}</div>
       <div>${formatFileSize(file.size)}</div>
     `;
-    
+
     previewItem.appendChild(fileInfo);
     previewItem.appendChild(removeBtn);
     container.appendChild(previewItem);
   });
-  
+
   modal.style.display = 'flex';
 }
 
@@ -1130,17 +1166,17 @@ function closeFilePreview() {
 
 function uploadSelectedFiles() {
   if (selectedFiles.length === 0) return;
-  
+
   selectedFiles.forEach(file => {
     uploadFile(file);
   });
-  
+
   closeFilePreview();
 }
 
 function uploadFile(file) {
   const reader = new FileReader();
-  
+
   reader.onload = function(e) {
     const fileData = {
       name: file.name,
@@ -1148,7 +1184,7 @@ function uploadFile(file) {
       type: file.type,
       data: e.target.result
     };
-    
+
     if (isDmUpload && dmRecipient) {
       // Send file via direct message
       if (socket) {
@@ -1171,17 +1207,17 @@ function uploadFile(file) {
       }
     }
   };
-  
+
   reader.readAsDataURL(file);
 }
 
 function formatFileSize(bytes) {
   if (bytes === 0) return '0 Bytes';
-  
+
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
@@ -1222,7 +1258,7 @@ function displayFileMessage(data, isDm = false) {
   } else {
     const fileIcon = document.createElement('div');
     fileIcon.className = 'file-type-icon';
-    
+
     if (file.type.startsWith('audio/')) {
       fileIcon.innerHTML = '<i class="fas fa-music"></i>';
     } else if (file.type.includes('pdf')) {
@@ -1234,14 +1270,14 @@ function displayFileMessage(data, isDm = false) {
     } else {
       fileIcon.innerHTML = '<i class="fas fa-file"></i>';
     }
-    
+
     const fileDetails = document.createElement('div');
     fileDetails.className = 'file-details';
     fileDetails.innerHTML = `
       <div class="file-name">${file.name}</div>
       <div class="file-size">${formatFileSize(file.size)}</div>
     `;
-    
+
     fileAttachment.appendChild(fileIcon);
     fileAttachment.appendChild(fileDetails);
     fileAttachment.style.cursor = 'pointer';
@@ -1295,18 +1331,18 @@ function showImageViewer(imageSrc, filename) {
       </div>
     </div>
   `;
-  
+
   // Close modal functionality
   const closeModal = () => {
     document.body.removeChild(modal);
   };
-  
+
   modal.addEventListener('click', (e) => {
     if (e.target === modal || e.target.classList.contains('image-viewer-close')) {
       closeModal();
     }
   });
-  
+
   // ESC key to close
   const handleEsc = (e) => {
     if (e.key === 'Escape') {
@@ -1315,7 +1351,7 @@ function showImageViewer(imageSrc, filename) {
     }
   };
   document.addEventListener('keydown', handleEsc);
-  
+
   document.body.appendChild(modal);
 }
 
@@ -1330,7 +1366,7 @@ function downloadFile(dataUrl, filename) {
 function setupEmojiPicker() {
   const emojiButton = document.getElementById('emojiButton');
   const dmEmojiButton = document.getElementById('dmEmojiButton');
-  
+
   if (emojiButton) {
     emojiButton.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1338,7 +1374,7 @@ function setupEmojiPicker() {
       toggleEmojiPicker(false); // false for main chat
     });
   }
-  
+
   if (dmEmojiButton) {
     dmEmojiButton.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1346,7 +1382,7 @@ function setupEmojiPicker() {
       toggleEmojiPicker(true); // true for DM
     });
   }
-  
+
   // Close emoji picker when clicking outside
   document.addEventListener('click', (e) => {
     if (isEmojiPickerOpen && emojiPicker && !emojiPicker.contains(e.target)) {
@@ -1357,7 +1393,7 @@ function setupEmojiPicker() {
           clickedEmojiButton = true;
         }
       });
-      
+
       if (!clickedEmojiButton) {
         hideEmojiPicker();
       }
@@ -1377,30 +1413,30 @@ function showEmojiPicker(isDm = false) {
   if (emojiPicker) {
     emojiPicker.remove();
   }
-  
+
   emojiPicker = createEmojiPicker(isDm);
   document.body.appendChild(emojiPicker);
-  
+
   // Position the picker
   const targetButton = isDm ? document.getElementById('dmEmojiButton') : document.getElementById('emojiButton');
   if (targetButton) {
     const rect = targetButton.getBoundingClientRect();
     const pickerHeight = 320;
     const pickerWidth = 300;
-    
+
     // Position above the button if there's not enough space below
     if (rect.bottom + pickerHeight > window.innerHeight) {
       emojiPicker.style.bottom = `${window.innerHeight - rect.top + 5}px`;
     } else {
       emojiPicker.style.top = `${rect.bottom + 5}px`;
     }
-    
+
     // Center horizontally relative to button, but keep within viewport
     let left = rect.left + (rect.width / 2) - (pickerWidth / 2);
     left = Math.max(10, Math.min(left, window.innerWidth - pickerWidth - 10));
     emojiPicker.style.left = `${left}px`;
   }
-  
+
   isEmojiPickerOpen = true;
 }
 
@@ -1415,27 +1451,27 @@ function hideEmojiPicker() {
 function createEmojiPicker(isDm = false) {
   const picker = document.createElement('div');
   picker.className = 'emoji-picker';
-  
+
   // Search input
   const searchContainer = document.createElement('div');
   searchContainer.className = 'emoji-search-container';
-  
+
   const searchInput = document.createElement('input');
   searchInput.type = 'text';
   searchInput.placeholder = 'Search emojis...';
   searchInput.className = 'emoji-search';
   searchInput.addEventListener('input', (e) => filterEmojis(e.target.value));
-  
+
   searchContainer.appendChild(searchInput);
   picker.appendChild(searchContainer);
-  
+
   // Category tabs
   const tabsContainer = document.createElement('div');
   tabsContainer.className = 'emoji-tabs';
-  
+
   const categories = Object.keys(emojiData);
   categories.unshift('Recent'); // Add recent category at the beginning
-  
+
   categories.forEach((category, index) => {
     const tab = document.createElement('button');
     tab.className = `emoji-tab ${index === 0 ? 'active' : ''}`;
@@ -1444,19 +1480,19 @@ function createEmojiPicker(isDm = false) {
     tab.addEventListener('click', () => switchEmojiCategory(category, tab));
     tabsContainer.appendChild(tab);
   });
-  
+
   picker.appendChild(tabsContainer);
-  
+
   // Emoji grid container
   const gridContainer = document.createElement('div');
   gridContainer.className = 'emoji-grid-container';
   gridContainer.id = 'emojiGridContainer';
-  
+
   picker.appendChild(gridContainer);
-  
+
   // Show recent emojis by default
   showEmojiCategory('Recent', isDm);
-  
+
   return picker;
 }
 
@@ -1479,7 +1515,7 @@ function switchEmojiCategory(category, activeTab) {
   // Update active tab
   document.querySelectorAll('.emoji-tab').forEach(tab => tab.classList.remove('active'));
   activeTab.classList.add('active');
-  
+
   // Show category emojis
   const isDm = emojiPicker.closest('.direct-messaging') !== null;
   showEmojiCategory(category, isDm);
@@ -1488,9 +1524,9 @@ function switchEmojiCategory(category, activeTab) {
 function showEmojiCategory(category, isDm = false) {
   const container = document.getElementById('emojiGridContainer');
   if (!container) return;
-  
+
   container.innerHTML = '';
-  
+
   let emojis = [];
   if (category === 'Recent') {
     emojis = recentEmojis;
@@ -1501,10 +1537,10 @@ function showEmojiCategory(category, isDm = false) {
   } else {
     emojis = emojiData[category] || [];
   }
-  
+
   const grid = document.createElement('div');
   grid.className = 'emoji-grid';
-  
+
   emojis.forEach(emoji => {
     const emojiBtn = document.createElement('button');
     emojiBtn.className = 'emoji-btn';
@@ -1513,7 +1549,7 @@ function showEmojiCategory(category, isDm = false) {
     emojiBtn.addEventListener('click', () => insertEmoji(emoji, isDm));
     grid.appendChild(emojiBtn);
   });
-  
+
   container.appendChild(grid);
 }
 
@@ -1522,18 +1558,18 @@ function filterEmojis(searchTerm) {
     showEmojiCategory('Recent');
     return;
   }
-  
+
   const container = document.getElementById('emojiGridContainer');
   if (!container) return;
-  
+
   container.innerHTML = '';
-  
+
   // Search through all categories
   const allEmojis = [];
   Object.values(emojiData).forEach(categoryEmojis => {
     allEmojis.push(...categoryEmojis);
   });
-  
+
   // Simple search - could be enhanced with emoji names/keywords
   const filteredEmojis = allEmojis.filter(emoji => 
     emoji.includes(searchTerm.toLowerCase()) || 
@@ -1541,15 +1577,15 @@ function filterEmojis(searchTerm) {
       keyword.toLowerCase().includes(searchTerm.toLowerCase())
     )
   );
-  
+
   if (filteredEmojis.length === 0) {
     container.innerHTML = '<div class="emoji-empty">No emojis found</div>';
     return;
   }
-  
+
   const grid = document.createElement('div');
   grid.className = 'emoji-grid';
-  
+
   filteredEmojis.slice(0, 50).forEach(emoji => { // Limit results
     const emojiBtn = document.createElement('button');
     emojiBtn.className = 'emoji-btn';
@@ -1558,7 +1594,7 @@ function filterEmojis(searchTerm) {
     emojiBtn.addEventListener('click', () => insertEmoji(emoji));
     grid.appendChild(emojiBtn);
   });
-  
+
   container.appendChild(grid);
 }
 
@@ -1582,21 +1618,21 @@ function getEmojiKeywords(emoji) {
 function insertEmoji(emoji, isDm = false) {
   const input = isDm ? document.getElementById('dm-input') : document.getElementById('messageInput');
   if (!input) return;
-  
+
   const cursorPos = input.selectionStart;
   const textBefore = input.value.substring(0, cursorPos);
   const textAfter = input.value.substring(input.selectionEnd);
-  
+
   input.value = textBefore + emoji + textAfter;
   input.focus();
-  
+
   // Set cursor position after the emoji
   const newCursorPos = cursorPos + emoji.length;
   input.setSelectionRange(newCursorPos, newCursorPos);
-  
+
   // Add to recent emojis
   addToRecentEmojis(emoji);
-  
+
   // Hide picker
   hideEmojiPicker();
 }
@@ -1604,13 +1640,13 @@ function insertEmoji(emoji, isDm = false) {
 function addToRecentEmojis(emoji) {
   // Remove if already exists
   recentEmojis = recentEmojis.filter(e => e !== emoji);
-  
+
   // Add to beginning
   recentEmojis.unshift(emoji);
-  
+
   // Keep only last 24 emojis
   recentEmojis = recentEmojis.slice(0, 24);
-  
+
   // Save to localStorage
   localStorage.setItem('recentEmojis', JSON.stringify(recentEmojis));
 }

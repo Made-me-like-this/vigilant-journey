@@ -42,12 +42,15 @@ class Message(db.Model):
 # Initialize SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# In-memory data structures
+# In-memory data structures with limits
 rooms = {}
 user_sessions = {}
 online_users = set()
 dm_history = {}
 MAX_ROOM_SIZE = 50
+MAX_MESSAGES_IN_MEMORY = 100
+MESSAGE_RATE_LIMIT = 10  # messages per minute per user
+user_message_counts = {}  # Track message rates
 
 # Setup database
 with app.app_context():
@@ -251,6 +254,24 @@ def handle_message(data):
         if not all([username, room, message]) or room not in rooms:
             return
         
+        # Rate limiting check
+        current_time = time.time()
+        user_key = f"{username}_{room}"
+        if user_key not in user_message_counts:
+            user_message_counts[user_key] = []
+        
+        # Remove messages older than 1 minute
+        user_message_counts[user_key] = [
+            msg_time for msg_time in user_message_counts[user_key] 
+            if current_time - msg_time < 60
+        ]
+        
+        if len(user_message_counts[user_key]) >= MESSAGE_RATE_LIMIT:
+            emit('error', {'message': 'Rate limit exceeded. Please slow down.'})
+            return
+        
+        user_message_counts[user_key].append(current_time)
+        
         # Validate message length and content
         message = message.strip()
         if len(message) > 1000:
@@ -429,18 +450,21 @@ def on_get_dm_history(data):
     try:
         user1 = data.get('user1')
         user2 = data.get('user2')
+        page = data.get('page', 1)
+        limit = data.get('limit', 50)
         
         if not user1 or not user2:
             return
         
-        # Get history from database
+        # Get paginated history from database
+        offset = (page - 1) * limit
         query = Message.query.filter(
             Message.is_dm == True,
             db.or_(
                 db.and_(Message.sender == user1, Message.recipient == user2),
                 db.and_(Message.sender == user2, Message.recipient == user1)
             )
-        ).order_by(Message.timestamp).all()
+        ).order_by(Message.timestamp.desc()).offset(offset).limit(limit).all()
         
         # Convert to list of dictionaries
         history = []
