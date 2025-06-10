@@ -109,6 +109,9 @@ function toggleMenu() {
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
+  // Add direct messaging UI first
+  setupDirectMessagingUI();
+  
   // Setup profile picture upload
   const profileUpload = document.getElementById('profile-upload');
   const profileImg = document.getElementById('profile-img');
@@ -175,9 +178,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize Socket.IO connection
   initializeSocket();
-
-  // Add direct messaging UI
-  setupDirectMessagingUI();
 
   // Setup message input event listeners
   const messageInput = document.getElementById('messageInput');
