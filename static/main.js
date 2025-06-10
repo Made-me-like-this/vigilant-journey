@@ -49,7 +49,22 @@ function setupDirectMessagingUI() {
     </header>
     <div class="dm-messages" id="dm-messages"></div>
     <footer class="dm-input-area">
-      <input id="dm-input" placeholder="Type a direct message..." disabled />
+      <input type="file" id="dmFileInput" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" style="display: none;" multiple>
+      <input type="file" id="dmCameraInput" accept="image/*" capture="environment" style="display: none;">
+      <button class="action-btn dm-action-btn" id="dmAttachButton" aria-label="Attach file">
+        <i class="fas fa-paperclip"></i>
+      </button>
+      <button class="action-btn dm-action-btn" id="dmCameraButton" aria-label="Take photo">
+        <i class="fas fa-camera"></i>
+      </button>
+      <div class="message-input-wrapper dm-input-wrapper">
+        <input id="dm-input" placeholder="Type a direct message..." disabled />
+        <div class="input-actions">
+          <button class="action-btn" id="dmEmojiButton" aria-label="Insert emoji">
+            <i class="fas fa-smile"></i>
+          </button>
+        </div>
+      </div>
       <button id="dm-send-btn" onclick="sendDirectMessage()" disabled>
         <i class="fas fa-paper-plane"></i>
       </button>
@@ -1248,11 +1263,60 @@ function displayFileMessage(data, isDm = false) {
 }
 
 function openFileInNewTab(dataUrl, filename) {
-  const link = document.createElement('a');
-  link.href = dataUrl;
-  link.target = '_blank';
-  link.download = filename;
-  link.click();
+  // For images, show in modal viewer instead of opening in new tab
+  if (filename.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
+    showImageViewer(dataUrl, filename);
+  } else {
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.target = '_blank';
+    link.download = filename;
+    link.click();
+  }
+}
+
+function showImageViewer(imageSrc, filename) {
+  // Create image viewer modal
+  const modal = document.createElement('div');
+  modal.className = 'image-viewer-modal';
+  modal.innerHTML = `
+    <div class="image-viewer-content">
+      <div class="image-viewer-header">
+        <span class="image-filename">${filename}</span>
+        <button class="image-viewer-close">&times;</button>
+      </div>
+      <div class="image-viewer-body">
+        <img src="${imageSrc}" alt="${filename}" class="image-viewer-img">
+      </div>
+      <div class="image-viewer-actions">
+        <button class="btn secondary" onclick="downloadFile('${imageSrc}', '${filename}')">
+          <i class="fas fa-download"></i> Download
+        </button>
+      </div>
+    </div>
+  `;
+  
+  // Close modal functionality
+  const closeModal = () => {
+    document.body.removeChild(modal);
+  };
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal || e.target.classList.contains('image-viewer-close')) {
+      closeModal();
+    }
+  });
+  
+  // ESC key to close
+  const handleEsc = (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      document.removeEventListener('keydown', handleEsc);
+    }
+  };
+  document.addEventListener('keydown', handleEsc);
+  
+  document.body.appendChild(modal);
 }
 
 function downloadFile(dataUrl, filename) {
